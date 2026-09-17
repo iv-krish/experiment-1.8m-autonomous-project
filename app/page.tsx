@@ -1,6 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseClient = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : null;
 
 interface ExperimentData {
   total_raised: number;
@@ -22,7 +29,7 @@ export default function ExperimentHome() {
   const [loadingTier, setLoadingTier] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
 
-  // Fetch real-time status from backend
+  // Fetch real-time status from backend or directly from Supabase (for static GitHub Pages)
   const fetchStatus = async () => {
     try {
       const res = await fetch('/api/status');
@@ -34,9 +41,30 @@ export default function ExperimentHome() {
           Math.floor((new Date(json.death_timestamp).getTime() - Date.now()) / 1000)
         );
         setTimeLeft(diff);
+        return;
       }
     } catch (e) {
-      console.error('Failed to sync status:', e);
+      // Fall through to client-side Supabase query
+    }
+
+    if (supabaseClient) {
+      try {
+        const { data: dbData } = await supabaseClient
+          .from('experiment_state')
+          .select('*')
+          .eq('id', 1)
+          .single();
+        if (dbData) {
+          setData(dbData);
+          const diff = Math.max(
+            0,
+            Math.floor((new Date(dbData.death_timestamp).getTime() - Date.now()) / 1000)
+          );
+          setTimeLeft(diff);
+        }
+      } catch (err) {
+        console.warn('Supabase direct query fallback error:', err);
+      }
     }
   };
 
@@ -77,14 +105,18 @@ export default function ExperimentHome() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount }),
       });
-      const result = await res.json();
-      if (result.url) {
-        window.location.href = result.url;
+      if (res.ok) {
+        const result = await res.json();
+        if (result.url) {
+          window.location.href = result.url;
+        } else {
+          alert(result.error || 'Failed to initialize payment');
+        }
       } else {
-        alert(result.error || 'Failed to initialize payment');
+        alert('Stripe dynamic checkout requires a full-stack backend (e.g. Netlify/Vercel) or Stripe Payment Links.');
       }
     } catch (err) {
-      alert('Network error connecting to payment gateway.');
+      alert('Stripe dynamic checkout requires a full-stack backend (e.g. Netlify/Vercel) or Stripe Payment Links.');
     } finally {
       setLoadingTier(null);
     }

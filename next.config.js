@@ -1,6 +1,22 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
+const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
+let repo = '';
+if (isGithubActions) {
+  const repoFullName = process.env.GITHUB_REPOSITORY || '';
+  repo = repoFullName ? `/${repoFullName.split('/')[1]}` : '';
 }
 
-module.exports = nextConfig
+const isExport = process.env.NEXT_EXPORT === 'true' || isGithubActions;
+
+const nextConfig = {
+  output: isExport ? 'export' : undefined,
+  images: {
+    unoptimized: true,
+  },
+  basePath: repo,
+  assetPrefix: repo ? `${repo}/` : undefined,
+  trailingSlash: true,
+  reactStrictMode: true,
+};
+
+module.exports = nextConfig;

@@ -33,7 +33,11 @@ npm run dev
 ```
 Open `http://localhost:3000`.
 
-### 4. Deploying to Netlify (Recommended)
+### 4. Deploying to GitHub Pages (Automated CI/CD)
+The project includes a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) that automatically builds and deploys the static frontend to **GitHub Pages** on every push to `main`.
+* **Live GitHub Pages URL**: [https://iv-krish.github.io/experiment-1.8m-autonomous-project/](https://iv-krish.github.io/experiment-1.8m-autonomous-project/)
+
+### 5. Deploying to Netlify (Full-Stack with Dynamic API Routes)
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/iv-krish/experiment-1.8m-autonomous-project)
 
 1. Click the button above or import the repository on [Netlify](https://app.netlify.com/start).
