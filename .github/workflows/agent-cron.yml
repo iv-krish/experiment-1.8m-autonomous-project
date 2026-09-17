@@ -1,0 +1,24 @@
+name: Autonomous Agent Heartbeat
+
+on:
+  schedule:
+    # Runs every 6 hours automatically on GitHub's free runners
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-survival:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm install
+      - name: Run Autonomous Agent
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: node agent/agent.mjs
