@@ -33,7 +33,22 @@ npm run dev
 ```
 Open `http://localhost:3000`.
 
-### 4. Deploying to Vercel
+### 4. Deploying to Netlify (Recommended)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/iv-krish/experiment-1.8m-autonomous-project)
+
+1. Click the button above or import the repository on [Netlify](https://app.netlify.com/start).
+2. Select `iv-krish/experiment-1.8m-autonomous-project`.
+3. Add the environment variables from `.env.example` in Netlify **Site configuration > Environment variables**:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+   - `NEXT_PUBLIC_APP_URL`
+4. Click **Deploy site**.
+5. Add the Stripe Webhook URL: `https://your-netlify-subdomain.netlify.app/api/stripe-webhook`.
+
+### 5. Deploying to Vercel
 1. Push this project to your GitHub repository.
 2. Import the repo on [Vercel](https://vercel.com).
 3. Add the environment variables from `.env.local` into Vercel Settings.
