@@ -1,15 +1,13 @@
 /**
  * Autonomous Campaign CEO
  *
- * This agent is intentionally bounded: it can analyze campaign telemetry and
- * create recommendations/experiments, but it cannot transfer money, delete the
- * site, or change payment terms. Set AUTONOMY_MODE=live only after reviewing
- * the tool permissions in production.
+ * Bounded by design: it analyzes telemetry and creates recommendations or
+ * proposed experiments. It cannot transfer money, delete infrastructure, or
+ * change payment terms.
  */
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
-
 dotenv.config();
 
 const TARGET = Number(process.env.TARGET_AMOUNT || 1800000);
@@ -17,10 +15,7 @@ const STARTING_CAPITAL = Number(process.env.STARTING_CAPITAL || 100);
 const MAX_EXPERIMENT_SPEND = Number(process.env.MAX_EXPERIMENT_SPEND || 10);
 const MODE = process.env.AUTONOMY_MODE || 'advisory';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 async function telemetry() {
   const [{ data: state }, { data: ledger }, { data: experiments }] = await Promise.all([
@@ -38,7 +33,7 @@ function calculate(t) {
   const raised = Number(t.state?.total_raised || 0);
   const contributors = Number(t.state?.contributions_count || 0);
   return {
-    target,
+    target: TARGET,
     raised,
     contributors,
     progress: TARGET ? raised / TARGET : 0,
@@ -51,9 +46,7 @@ function calculate(t) {
 }
 
 async function aiAdvice(metrics) {
-  if (!process.env.OPENAI_API_KEY) {
-    return { summary: 'No AI key configured; deterministic strategy used.', actions: [] };
-  }
+  if (!process.env.OPENAI_API_KEY) return { summary: 'No AI key configured; deterministic strategy used.', actions: [] };
   const prompt = `You are the Campaign CEO for a transparent crowdfunding experiment. Goal: raise $${TARGET}. Starting operating capital: $${STARTING_CAPITAL}. Never suggest deception, fake testimonials, fake contributors, spam, illegal fundraising, evasion of advertising rules, or unauthorized financial transfers. Return JSON with keys summary and actions. Each action must contain name, reason, estimated_cost_usd, success_metric, and risk. Campaign metrics: ${JSON.stringify(metrics)}`;
   const r = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -62,27 +55,18 @@ async function aiAdvice(metrics) {
   });
   if (!r.ok) throw new Error(`OpenAI request failed: ${r.status}`);
   const body = await r.json();
-  const text = body.output_text || '{}';
-  return JSON.parse(text);
+  return JSON.parse(body.output_text || '{}');
 }
 
 async function recordRun(metrics, advice, status) {
-  await supabase.from('agent_runs').insert({
-    mode: MODE,
-    status,
-    metrics,
-    advice,
-    created_at: new Date().toISOString()
-  });
+  await supabase.from('agent_runs').insert({ mode: MODE, status, metrics, advice, created_at: new Date().toISOString() });
 }
 
 async function main() {
   const t = await telemetry();
+  if (!t.state) throw new Error('experiment_state row missing');
   const metrics = calculate(t);
 
-  if (!t.state) throw new Error('experiment_state row missing');
-
-  // Never destroy infrastructure. Dormancy is represented in state instead.
   if (!t.state.is_alive) {
     await recordRun(metrics, { summary: 'Campaign is dormant.', actions: [] }, 'dormant');
     console.log('[CEO] DORMANT');
@@ -90,9 +74,12 @@ async function main() {
   }
 
   const advice = await aiAdvice(metrics);
-  const safeActions = (advice.actions || []).filter(a => Number(a.estimated_cost_usd || 0) <= MAX_EXPERIMENT_SPEND);
+  const safeActions = (advice.actions || [])
+    .filter(a => Number(a.estimated_cost_usd || 0) >= 0)
+    .filter(a => Number(a.estimated_cost_usd || 0) <= MAX_EXPERIMENT_SPEND)
+    .slice(0, 3);
 
-  for (const action of safeActions.slice(0, 3)) {
+  for (const action of safeActions) {
     await supabase.from('agent_experiments').insert({
       name: action.name,
       reason: action.reason,
