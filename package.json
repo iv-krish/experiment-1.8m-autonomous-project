@@ -1,17 +1,19 @@
 {
   "name": "experiment-1.8m-autonomous",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "agent:check": "node agent/agent.mjs"
+    "agent:check": "node agent/agent.mjs",
+    "agent:ceo": "node agent/ceo-agent.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "axios": "^1.6.2",
+    "dotenv": "^16.4.5",
     "lucide-react": "^0.300.0",
     "next": "^14.0.4",
     "react": "^18.2.0",
